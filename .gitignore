@@ -1,0 +1,11 @@
+.classpath
+.DS_Store
+.idea
+.vscode
+.settings
+.project
+target/classes*
+target/javadoc*
+target/maven*
+target/test*
+target/velocity*
