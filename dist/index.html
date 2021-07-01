@@ -108,7 +108,7 @@
     // some housekeeping variables
 
     const flowId = getUrlParameter('flowId');
-    const authUrl = 'https://hrblock-qa-pingfederate-engine.ping-devops.com';
+    const authUrl = 'https://pingfederate.example.com';
 
     // getUrlParameter function parses out the querystring to fetch specific value (e.g., flowId)
 
@@ -222,7 +222,7 @@
 
       if (flowId) {
 
-        // yes, url has a flowId - so they just arrived from p14c
+        // yes, url has a flowId - so they just arrived from PingFederate
 
         console.log('flowId found in url');
         console.log('Performing PingFederate ajax query to determine next step');
