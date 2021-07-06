@@ -54,8 +54,8 @@
       </div>
       <!-- /checkUsernamePasswordDiv div -->
 
-      <!-- submitIdentifier -->
-      <div class="container collapse" id="submitIdentifier">
+      <!-- submitIdentifierDiv -->
+      <div class="container collapse" id="submitIdentifierDiv">
         <h2 class="mb-5">Sign In</h2>
         <form>
           <div class="form-row">
@@ -72,7 +72,7 @@
           <a href="#" class="mt-5 btn btn-primary btn-lg" onclick="javascript:submitIdentifier();">Sign In</a>
         </form>
       </div>
-      <!-- /submitIdentifier div -->
+      <!-- /submitIdentifierDiv -->
 
       <!-- warning div -->
       <div class="container collapse" id="warningDiv">
@@ -161,7 +161,7 @@
     function submitIdentifier() {
       console.log('submitIdentifier called');
       let payload = JSON.stringify({ identifier: $('#identifier').val() });
-      let url = $('#submitIdentifier').val();
+      let url = $('#submitIdentifierUrl').val();
       let contenttype = 'application/vnd.pingidentity.submitIdentifier+json';
       exJax('POST', url, nextStep, contenttype, payload);
     }
@@ -189,8 +189,8 @@
           break;
         case 'IDENTIFIER_REQUIRED':
           console.log('Rendering submitIdentifier form');
-          $('#submitIdentifier').show();
-          $('#submitIdentifier').val(data._links.submitIdentifier.href);
+          $('#submitIdentifierDiv').show();
+          $('#submitIdentifierUrl').val(data._links.submitIdentifier.href);
           break;
         case 'RESUME':
           console.log('Completed authentication successfully');
