@@ -33,26 +33,20 @@
       <form>
         <div class="form-row">
           <div class="form-group col-md-6">
-            <input type="email" class="form-control" name="username" id="username" placeholder="Email Address"
-              autocomplete="username" autofocus />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group col-md-6">
             <input type="password" class="form-control" name="password" id="password" placeholder="Password"
               autocomplete="current-password" required />
           </div>
           <div class="form-group collapse">
-            <input type="text" class="form-control" name="checkUsernamePasswordUrl" id="checkUsernamePasswordUrl" readonly />
+            <input type="text" class="form-control" name="username" id="username" readonly />
+            <input type="text" class="form-control" name="authenticationApiUrl" id="authenticationApiUrl" readonly />
           </div>
         </div>
         <div class="mt-5" id="signOnPayload">
-          <a href="#" class="btn btn-primary btn-lg mb-2" onclick="javascript:checkUsernamePassword();">Sign In</a>
+          <a href="#" class="btn btn-primary btn-lg mr-2" onclick="javascript:checkUsernamePassword();">Sign In</a>
         </div>
-        <div class="mt-5" id="selfServicePayload"></div>
       </form>
     </div>
-    <!-- /checkUsernamePasswordDiv div -->
+    <!-- /checkUsernamePasswordDiv -->
 
     <!-- submitIdentifierDiv -->
     <div class="container collapse" id="submitIdentifierDiv">
@@ -65,14 +59,35 @@
           </div>
         </div>
         <div class="form-row collapse">
-          <div class="form-group col-md-6"> <input type="text" class="form-control" name="submitIdentifierUrl"
-              id="submitIdentifierUrl" readonly />
+          <div class="form-group col-md-6">
+            <input type="text" class="form-control" name="authenticationApiUrl" id="authenticationApiUrl" readonly />
           </div>
         </div>
         <a href="#" class="mt-5 btn btn-primary btn-lg" onclick="javascript:submitIdentifier();">Sign In</a>
       </form>
     </div>
     <!-- /submitIdentifierDiv -->
+
+    <!-- verifyOtpDiv -->
+    <div class="container collapse" id="verifyOtpDiv">
+      <h2 class="mb-5">Verify One Time Passcode</h2>
+
+      <form>
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <input type="text" class="form-control" name="otp" id="otp" placeholder="One Time Passcode"
+              required />
+          </div>
+          <div class="form-group collapse">
+            <input type="text" class="form-control" name="authenticationApiUrl" id="authenticationApiUrl" readonly />
+          </div>
+        </div>
+        <div class="mt-5" id="signOnPayload">
+          <a href="#" class="btn btn-primary btn-lg mr-2" onclick="javascript:checkOtp();">Sign In</a>
+        </div>
+      </form>
+    </div>
+    <!-- /verifyOtpDiv -->
 
     <!-- warning div -->
     <div class="container collapse" id="warningDiv">
@@ -139,9 +154,26 @@
         .fail(function (data) {
           console.log('ajax call failed');
           console.log(data);
-          $('#warningMessage').text(data.responseJSON.details[0].userMessage);
+          // $('#warningMessage').text(data.responseJSON.details[0].userMessage);
           $('#warningDiv').show();
         });
+    }
+
+    // validate otp function
+
+    function checkOtp() {
+      console.log('checkOtp called');
+      let payload = JSON.stringify({ otp: $('#otp').val() });
+      let url = $('#authenticationApiUrl').val();
+      let contenttype = 'application/vnd.pingidentity.checkOtp+json';
+      exJax('POST', url, nextStep, contenttype, payload);
+    }
+
+    function continueAuthentication() {
+      console.log('continueAuthentication called');
+      let url = $('#authenticationApiUrl').val();
+      let contenttype = 'application/vnd.pingidentity.continueAuthentication+json';
+      exJax('POST', url, nextStep, contenttype, null);
     }
 
     // validate password function
@@ -149,7 +181,7 @@
     function checkUsernamePassword() {
       console.log('checkUsernamePassword called');
       let payload = JSON.stringify({ username: $('#username').val(), password: $('#password').val() });
-      let url = $('#checkUsernamePasswordUrl').val();
+      let url = $('#authenticationApiUrl').val();
       let contenttype = 'application/vnd.pingidentity.checkUsernamePassword+json';
       exJax('POST', url, nextStep, contenttype, payload);
     }
@@ -159,8 +191,28 @@
     function submitIdentifier() {
       console.log('submitIdentifier called');
       let payload = JSON.stringify({ identifier: $('#identifier').val() });
-      let url = $('#submitIdentifierUrl').val();
+      let url = $('#authenticationApiUrl').val();
       let contenttype = 'application/vnd.pingidentity.submitIdentifier+json';
+      exJax('POST', url, nextStep, contenttype, payload);
+    }
+
+    // alternate authentication sources function
+
+    function useAlternativeAuthenticationSource(source) {
+      console.log('useAlternativeAuthenticationSource called: ' + source);
+      let payload = JSON.stringify({ authenticationSource: source });
+      let url = $('#authenticationApiUrl').val();
+      let contenttype = 'application/vnd.pingidentity.useAlternativeAuthenticationSource+json';
+      exJax('POST', url, nextStep, contenttype, payload);
+    }
+
+    // authenticationRequired initiates PingOne MFA
+
+    function authenticationRequired() {
+      console.log('authenticationRequired called');
+      let payload = JSON.stringify({ mobilePayload: '' });
+      let url = $('#authenticationApiUrl').val();
+      let contenttype = 'application/vnd.pingidentity.authenticate+json';
       exJax('POST', url, nextStep, contenttype, payload);
     }
   
@@ -178,18 +230,31 @@
       $('#warningDiv').hide();
       $('#checkUsernamePasswordDiv').hide();
       $('#submitIdentifierDiv').hide();
+      $('#verifyOtpDiv').hide();
+
+      $('#authenticationApiUrl').val(data._links.self.href);
 
       switch (status) {
         case 'USERNAME_PASSWORD_REQUIRED':
           console.log('Rendering login form');
           $('#checkUsernamePasswordDiv').show();
           $('#username').val(data.username);
-          $('#checkUsernamePasswordUrl').val(data._links['checkUsernamePassword'].href);
           break;
         case 'IDENTIFIER_REQUIRED':
           console.log('Rendering submitIdentifier form');
           $('#submitIdentifierDiv').show();
-          $('#submitIdentifierUrl').val(data._links.submitIdentifier.href);
+          break;
+        case 'AUTHENTICATION_REQUIRED':
+          console.log('Moving authentication along');
+          authenticationRequired();
+          break;
+        case 'OTP_REQUIRED':
+          console.log('Rendering verifyOtp form');
+          $('#verifyOtpDiv').show();
+          break;
+        case 'MFA_COMPLETED':
+          console.log('Completed mfa successfully');
+          continueAuthentication();
           break;
         case 'RESUME':
           console.log('Completed authentication successfully');
@@ -205,6 +270,28 @@
         default:
           console.log('Unexpected outcome');
           break;
+      }
+
+      // check for alternates
+
+      if (data.alternativeAuthenticationSources) {
+
+        // yes we have external identity providers
+
+        console.log('alternativeAuthenticationSources found');
+
+        let alternativeAuthenticationSources = data.alternativeAuthenticationSources;
+
+        // iterate through the collection of alternativeAuthenticationSources
+
+        for (let i = 0; i < alternativeAuthenticationSources.length; i++) {
+
+          newButton = '<a href="#" class="btn btn-warning btn-lg mr-2" onclick="javascript:useAlternativeAuthenticationSource(\'' + alternativeAuthenticationSources[i].name + '\');">' + alternativeAuthenticationSources[i].name + '</a>';
+
+          $('#signOnPayload').append(newButton);
+
+        }
+
       }
 
     }
@@ -234,4 +321,3 @@
 </body>
 
 </html>
-
