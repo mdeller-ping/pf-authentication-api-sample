@@ -29,7 +29,6 @@
     <!-- checkUsernamePasswordDiv -->
     <div class="container collapse" id="checkUsernamePasswordDiv">
       <h2 class="mb-5">Sign In</h2>
-
       <form>
         <div class="form-row">
           <div class="form-group col-md-6">
@@ -68,10 +67,19 @@
     </div>
     <!-- /submitIdentifierDiv -->
 
+    <!-- selectDeviceDiv -->
+    <div class="container collapse" id="selectDeviceDiv">
+      <h2 class="mb-5">Select Authentication Method</h2>
+      <form>
+        <div class="mt-5" id="devicesPayload">
+        </div>
+      </form>
+    </div>
+    <!-- /selectDeviceDiv -->
+    
     <!-- verifyOtpDiv -->
     <div class="container collapse" id="verifyOtpDiv">
       <h2 class="mb-5">Verify One Time Passcode</h2>
-
       <form>
         <div class="form-row">
           <div class="form-group col-md-6">
@@ -113,7 +121,7 @@
     integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
     crossorigin="anonymous"></script>
 
-  <script>
+<script>
 
     // documentation
     // https://docs.pingidentity.com/bundle/integrations/page/fus1609884696127.html
@@ -157,9 +165,19 @@
         .fail(function (data) {
           console.log('ajax call failed');
           console.log(data);
-          // $('#warningMessage').text(data.responseJSON.details[0].userMessage);
+          $('#warningMessage').text(data.responseJSON.details[0].userMessage);
           $('#warningDiv').show();
         });
+    }
+
+    // select device function
+
+    function selectDevice(device) {
+      console.log('selectDevice called: ' + device);
+      let payload = JSON.stringify({ deviceRef: { id: device }});
+      let url = $('#authenticationApiUrl').val();
+      let contenttype = 'application/vnd.pingidentity.selectDevice+json';
+      exJax('POST', url, nextStep, contenttype, payload);
     }
 
     // validate otp function
@@ -171,6 +189,8 @@
       let contenttype = 'application/vnd.pingidentity.checkOtp+json';
       exJax('POST', url, nextStep, contenttype, payload);
     }
+
+    // continueAuthentication transisitions back from PingOne MFA
 
     function continueAuthentication() {
       console.log('continueAuthentication called');
@@ -234,6 +254,7 @@
       $('#checkUsernamePasswordDiv').hide();
       $('#submitIdentifierDiv').hide();
       $('#verifyOtpDiv').hide();
+      $('#selectDeviceDiv').hide();
 
       $('#authenticationApiUrl').val(data._links.self.href);
 
@@ -250,6 +271,18 @@
         case 'AUTHENTICATION_REQUIRED':
           console.log('Moving authentication along');
           authenticationRequired();
+          break;
+        case 'DEVICE_SELECTION_REQUIRED':
+          console.log('Rendering selectDevice form');
+          let devices = data.devices;
+          for (let i = 0; i < devices.length; i++) {
+            deviceButton = '<a href="#" class="btn btn-secondary btn-lg mr-2" onclick="javascript:selectDevice(\''
+                  + devices[i].id + '\');">'
+                  + devices[i].target
+                  + ' (' + devices[i].type + ')</a>';
+            $('#devicesPayload').append(deviceButton);
+          }
+          $('#selectDeviceDiv').show();
           break;
         case 'OTP_REQUIRED':
           console.log('Rendering verifyOtp form');
@@ -275,11 +308,9 @@
           break;
       }
 
-      // check for alternates
-
       if (data.alternativeAuthenticationSources) {
 
-        // yes we have external identity providers
+      // we have alternativeAuthenticationSources (e.g., Social Networks or Multifactor)
 
         console.log('alternativeAuthenticationSources found');
 
@@ -289,12 +320,16 @@
 
         for (let i = 0; i < alternativeAuthenticationSources.length; i++) {
 
-          newButton = '<a href="#" class="btn btn-warning btn-lg mr-2" onclick="javascript:useAlternativeAuthenticationSource(\'' + alternativeAuthenticationSources[i].name + '\');">' + alternativeAuthenticationSources[i].name + '</a>';
+          // add buttons for each option
 
+          newButton = '<a href="#" class="btn btn-warning btn-lg mr-2" onclick="javascript:useAlternativeAuthenticationSource(\''
+                + alternativeAuthenticationSources[i].name
+                + '\');">' + alternativeAuthenticationSources[i].name
+                + '</a>';
           $('#signOnPayload').append(newButton);
 
         }
-
+ 
       }
 
     }
